@@ -26,6 +26,23 @@ func getIP(r *http.Request) (string, error) {
 	return ip, err
 }
 
+// getClientId retrieves the ClientID from the incoming request.
+// It uses the value of the `X-DataDome-ClientID` if the session by header feature is used.
+// It reads the `DataDome` cookie value otherwise.
+func getClientId(r *http.Request) string {
+	clientIDHeaders := r.Header.Get("x-datadome-clientid")
+	if len(clientIDHeaders) > 0 {
+		return clientIDHeaders
+	}
+
+	cookie, err := r.Cookie("datadome")
+	if err == nil {
+		return cookie.Value
+	}
+
+	return ""
+}
+
 // getCookieList returns the list of cookies' keys separated by commas
 func getCookieList(r *http.Request) string {
 	cookies := r.Cookies()

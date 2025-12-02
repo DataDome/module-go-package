@@ -296,12 +296,3 @@ func TestAddDataDomeRequestHeaders(t *testing.T) {
 	assert.Equal(t, "1", request.Header.Get("X-Datadome-isbot"))
 	assert.Equal(t, "", request.Header.Get("X-DataDome-Obiwan"))
 }
-
-func TestGetClientId(t *testing.T) {
-	req, _ := http.NewRequest(http.MethodGet, "/this-is-the-way", nil)
-	req.Header.Set("x-datadome-clientid", "123456")
-
-	result := getClientId(req)
-
-	assert.Equal(t, "123456", result)
-}

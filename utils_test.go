@@ -42,6 +42,15 @@ func TestGetIP(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
+func TestGetClientId(t *testing.T) {
+	req, _ := http.NewRequest(http.MethodGet, "/this-is-the-way", nil)
+	req.Header.Set("x-datadome-clientid", "123456")
+
+	result := getClientId(req)
+
+	assert.Equal(t, "123456", result)
+}
+
 func TestGetCookieList(t *testing.T) {
 	request := setup()
 

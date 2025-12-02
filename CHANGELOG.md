@@ -1,5 +1,9 @@
 # DataDome Go Module
 
+## v2.2.1 (2025-12-02)
+
+- Remove `go-querystring` dependency and reimplement URL encoding for payloads
+
 ## v2.2.0 (2025-06-05)
 
 - Add `CookiesList` to payloads sent to Protection API

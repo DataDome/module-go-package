@@ -8,9 +8,42 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/google/go-querystring/query"
 )
+
+const (
+	DefaultEnableGraphQLSupportValue      = false
+	DefaultEnableReferrerRestorationValue = false
+	DefaultEndpointValue                  = "api.datadome.co"
+	DefaultMaximumBodySizeValue           = 25 * 1024
+	DefaultModuleNameValue                = "Golang"
+	DefaultModuleVersionValue             = "2.2.1"
+	DefaultTimeoutValue                   = 150
+	DefaultUrlPatternInclusionValue       = ""
+	DefaultUrlPatternExclusionValue       = `(?i)\.(avi|avif|bmp|css|eot|flac|flv|gif|gz|ico|jpeg|jpg|js|json|less|map|mka|mkv|mov|mp3|mp4|mpeg|mpg|ogg|ogm|opus|otf|png|svg|svgz|swf|ttf|wav|webm|webp|woff|woff2|xml|zip)$`
+	DefaultUseXForwardedHostValue         = false
+)
+
+// Client is used to interract with the DataDome's Protection API.
+// This structure contains all the informations specified through the [Option]'s functions.
+type Client struct {
+	EnableGraphQLSupport      bool
+	EnableReferrerRestoration bool
+	Endpoint                  string
+	Logger                    Logger
+	MaximumBodySize           int
+	ModuleName                string
+	ModuleVersion             string
+	ServerSideKey             string
+	Timeout                   int
+	UrlPatternInclusion       string
+	UrlPatternExclusion       string
+	UseXForwardedHost         bool
+
+	endpoint            string
+	httpClient          *http.Client
+	urlPatternExclusion *regexp.Regexp
+	urlPatternInclusion *regexp.Regexp
+}
 
 // NewClient instantiate a new DataDome [Client] to perform calls to Protection API.
 // The fields may be customized through [Option] functions.
@@ -243,19 +276,13 @@ func (c *Client) buildRequest(r *http.Request) (string, error) {
 			c.Logger.Warn("fail to retrieve GraphQL data: %v", err)
 		}
 		if gqlData != nil && gqlData.Count != 0 {
-			operationName := truncateValue(GraphQLOperationName, gqlData.Name)
-			ddRequestParams.GraphQLOperationName = &operationName
+			ddRequestParams.GraphQLOperationName = truncateValue(GraphQLOperationName, gqlData.Name)
 			ddRequestParams.GraphQLOperationType = gqlData.Type
 			ddRequestParams.GraphQLOperationCount = strconv.Itoa(gqlData.Count)
 		}
 	}
 
-	queryStr, err := query.Values(&ddRequestParams)
-	if err != nil {
-		return "", fmt.Errorf("fail to set query values: %w", err)
-	}
-
-	return queryStr.Encode(), nil
+	return ddRequestParams.Encode(), nil
 }
 
 // datadomeCall performs a request to the Protection API
@@ -297,9 +324,10 @@ func (c *Client) datadomeCall(jsonStr string, origReq *http.Request, origResp ht
 	}
 
 	// Handler DataDome status code
-	if ddStatus == "400" {
+	switch ddStatus {
+	case "400":
 		return nil, origResp, false
-	} else if ddStatus == "301" || ddStatus == "302" || ddStatus == "401" || ddStatus == "403" {
+	case "301", "302", "401", "403":
 		origResp = addDataDomeHeaders(response, origResp)
 		origResp.WriteHeader(response.StatusCode)
 		_, err = origResp.Write(responseBody)
@@ -308,12 +336,12 @@ func (c *Client) datadomeCall(jsonStr string, origReq *http.Request, origResp ht
 		}
 		return nil, origResp, true
 
-	} else if ddStatus == "200" {
+	case "200":
 		addDataDomeRequestHeaders(response, origReq)
 		origResp = addDataDomeHeaders(response, origResp)
 		return nil, origResp, false
 
-	} else {
+	default:
 		return fmt.Errorf("%s response from Protection API - Unexpected error. If the error remains, please contact us at support@datadome.co. Full response: %v", ddStatus, response.Header), origResp, false
 	}
 }
@@ -351,21 +379,4 @@ func addDataDomeHeaders(ddResp *http.Response, origResp http.ResponseWriter) htt
 		}
 	}
 	return origResp
-}
-
-// getClientId retrieves the ClientID from the incoming request.
-// It uses the value of the `X-DataDome-ClientID` if the session by header feature is used.
-// It reads the `DataDome` cookie value otherwise.
-func getClientId(r *http.Request) string {
-	clientIDHeaders := r.Header.Get("x-datadome-clientid")
-	if len(clientIDHeaders) > 0 {
-		return clientIDHeaders
-	}
-
-	cookie, err := r.Cookie("datadome")
-	if err == nil {
-		return cookie.Value
-	}
-
-	return ""
 }
