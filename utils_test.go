@@ -144,6 +144,7 @@ func TestTruncateValue(t *testing.T) {
 		{want: 64, input: Header{Key: ContentType, Value: fakeCommonValue}},
 		{want: 128, input: Header{Key: SecCHUA, Value: fakeCommonValue}},
 		{want: 256, input: Header{Key: AcceptLanguage, Value: fakeCommonValue}},
+		{want: 512, input: Header{Key: ClientID, Value: fakeCommonValue}},
 		{want: 512, input: Header{Key: Origin, Value: fakeCommonValue}},
 		{want: 768, input: Header{Key: UserAgent, Value: fakeCommonValue}},
 		{want: 1024, input: Header{Key: Referer, Value: fakeCommonValue}},

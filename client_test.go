@@ -79,7 +79,7 @@ func TestNewClient(t *testing.T) {
 
 		assert.Nil(t, c)
 		assert.NotNil(t, err)
-		assert.Equal(t, "ServerSideKey must be defined", err.Error())
+		assert.Equal(t, "property ServerSideKey must be defined", err.Error())
 	})
 }
 
@@ -234,6 +234,50 @@ func TestDatadomeProtect_Blocked(t *testing.T) {
 			resp.Header.Add("X-Datadome-Headers", "X-Datadome")
 			resp.Header.Add("X-Datadome", "protected")
 			resp.Header.Add("X-Datadomeresponse", "403")
+			return resp, err
+		},
+	)
+
+	ddStruct, err := NewClient("azerty")
+	assert.Nil(t, err)
+
+	rw := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/ping", nil)
+	isBlocked, err := ddStruct.DatadomeProtect(rw, r)
+	assert.Empty(t, err)
+	assert.True(t, isBlocked)
+}
+
+func TestDatadomeProtect_MissingDdResponseHeader(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder("POST", "/validate-request",
+		func(req *http.Request) (*http.Response, error) {
+			resp, err := httpmock.NewJsonResponse(200, map[string]interface{}{})
+			return resp, err
+		},
+	)
+
+	ddStruct, err := NewClient("azerty")
+	assert.Nil(t, err)
+
+	rw := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/ping", nil)
+	isBlocked, err := ddStruct.DatadomeProtect(rw, r)
+	assert.Empty(t, err)
+	assert.False(t, isBlocked)
+}
+
+func TestDatadomeProtect_Redirect(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder("POST", "/validate-request",
+		func(req *http.Request) (*http.Response, error) {
+			resp, err := httpmock.NewJsonResponse(301, map[string]interface{}{})
+			resp.Header.Add("X-Datadomeresponse", "301")
+			resp.Header.Add("Location", "https://geo.captcha-delivery.com/captcha/")
 			return resp, err
 		},
 	)

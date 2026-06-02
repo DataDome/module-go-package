@@ -78,7 +78,7 @@ func TestWithMaximumBodySize(t *testing.T) {
 
 		assert.Nil(t, client)
 		assert.NotNil(t, err)
-		assert.Equal(t, "MaximumBodySize must be a positive integer", err.Error())
+		assert.Equal(t, "property MaximumBodySize must be a positive integer", err.Error())
 	})
 }
 
@@ -116,7 +116,7 @@ func TestWithTimeout(t *testing.T) {
 
 		assert.Nil(t, client)
 		assert.NotNil(t, err)
-		assert.Equal(t, "Timeout must be a positive integer", err.Error())
+		assert.Equal(t, "property Timeout must be a positive integer", err.Error())
 	})
 }
 
@@ -143,7 +143,7 @@ func TestWithUrlPatternExclusion(t *testing.T) {
 
 		assert.Nil(t, client)
 		assert.NotNil(t, err)
-		assert.True(t, strings.Contains(err.Error(), "UrlPatternExclusion must be a valid RegExp"))
+		assert.True(t, strings.Contains(err.Error(), "property UrlPatternExclusion must be a valid RegExp"))
 	})
 }
 
@@ -170,7 +170,7 @@ func TestWithUrlPatternInclusion(t *testing.T) {
 
 		assert.Nil(t, client)
 		assert.NotNil(t, err)
-		assert.True(t, strings.Contains(err.Error(), "UrlPatternInclusion must be a valid RegExp"))
+		assert.True(t, strings.Contains(err.Error(), "property UrlPatternInclusion must be a valid RegExp"))
 	})
 }
 
