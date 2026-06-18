@@ -68,10 +68,14 @@ func getHeaderList(r *http.Request) string {
 
 // getURL returns the path and the query parameters (if present) of the request
 func getURL(r *http.Request) string {
+	path := r.URL.Path
+	if path == "" {
+		path = "/"
+	}
 	if r.URL.RawQuery != "" {
-		return r.URL.Path + "?" + r.URL.RawQuery
+		return path + "?" + r.URL.RawQuery
 	} else {
-		return r.URL.Path
+		return path
 	}
 }
 

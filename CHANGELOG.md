@@ -1,5 +1,9 @@
 # DataDome Go Module
 
+## v2.4.1 (2026-06-18)
+
+- Sanitize payloads sent to Protection API
+
 ## v2.4.0 (2026-06-01)
 
 - Remove hard-coded status codes in favor of DataDome Protection API response headers, enabling seamless support for upcoming features

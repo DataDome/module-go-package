@@ -18,7 +18,7 @@ const (
 	DefaultEndpointValue                  = "api.datadome.co"
 	DefaultMaximumBodySizeValue           = 25 * 1024
 	DefaultModuleNameValue                = "Golang"
-	DefaultModuleVersionValue             = "2.4.0"
+	DefaultModuleVersionValue             = "2.4.1"
 	DefaultTimeoutValue                   = 150
 	DefaultUrlPatternInclusionValue       = ""
 	DefaultUrlPatternExclusionValue       = `(?i)\.(avi|avif|bmp|css|eot|flac|flv|gif|gz|ico|jpeg|jpg|js|json|less|map|mka|mkv|mov|mp3|mp4|mpeg|mpg|ogg|ogm|opus|otf|png|svg|svgz|swf|ttf|wav|webm|webp|woff|woff2|xml|zip)$`
