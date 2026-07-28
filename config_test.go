@@ -34,6 +34,18 @@ func TestWithGraphQLSupport(t *testing.T) {
 	assert.Equal(t, enableGraphQLSupport, client.EnableGraphQLSupport)
 }
 
+func TestWithGraphQLEndpoint(t *testing.T) {
+	graphQLEndpoint := "/gql"
+	client, err := NewClient(
+		"your-api-key",
+		WithGraphQLEndpoint(graphQLEndpoint),
+	)
+
+	assert.NotNil(t, client)
+	assert.Nil(t, err)
+	assert.Equal(t, graphQLEndpoint, client.GraphQLEndpoint)
+}
+
 func TestWithLogger(t *testing.T) {
 	mockLogger := &MockLogger{}
 
@@ -199,6 +211,12 @@ func ExampleWithGraphQLSupport() {
 
 	fmt.Println(c.EnableGraphQLSupport)
 	// Output: true
+}
+
+func ExampleWithGraphQLEndpoint() {
+	c, _ := NewClient("your-api-key", WithGraphQLEndpoint("/gql"))
+	fmt.Println(c.GraphQLEndpoint)
+	// Output: /gql
 }
 
 func ExampleWithLogger() {

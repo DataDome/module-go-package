@@ -125,6 +125,53 @@ func TestParseGraphQLQuery(t *testing.T) {
 	}
 }
 
+func TestIsGraphQLRequest(t *testing.T) {
+	newRequest := func(path string) *http.Request {
+		r := httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}"))
+		r.Header.Set("Content-Type", "application/json")
+		return r
+	}
+
+	tests := []struct {
+		name      string
+		request   *http.Request
+		endpoints []string
+		want      bool
+	}{
+		{
+			name:      "matches one of multiple configured endpoints",
+			request:   newRequest("/api/gql"),
+			endpoints: []string{"/graphql", "/api/gql", "/v2/graphql"},
+			want:      true,
+		},
+		{
+			name:      "does not match when path is not among multiple configured endpoints",
+			request:   newRequest("/other"),
+			endpoints: []string{"/graphql", "/api/gql", "/v2/graphql"},
+			want:      false,
+		},
+		{
+			name:      "skips empty entries in the endpoint list",
+			request:   newRequest("/graphql"),
+			endpoints: []string{"", "/graphql"},
+			want:      true,
+		},
+		{
+			name:      "does not match when configured endpoint has surrounding whitespace",
+			request:   newRequest("/graphql"),
+			endpoints: []string{" /graphql "},
+			want:      false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := isGraphQLRequest(tc.request, tc.endpoints)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func TestTruncateValue(t *testing.T) {
 	type Header struct {
 		Key   ApiFields
