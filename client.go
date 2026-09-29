@@ -19,7 +19,7 @@ const (
 	DefaultGraphQLEndpointValue           = "graphql"
 	DefaultMaximumBodySizeValue           = 25 * 1024
 	DefaultModuleNameValue                = "Golang"
-	DefaultModuleVersionValue             = "2.5.0"
+	DefaultModuleVersionValue             = "2.5.1"
 	DefaultTimeoutValue                   = 150
 	DefaultUrlPatternInclusionValue       = ""
 	DefaultUrlPatternExclusionValue       = `(?i)\.(avi|avif|bmp|css|eot|flac|flv|gif|gz|ico|jpeg|jpg|js|json|less|map|mka|mkv|mov|mp3|mp4|mpeg|mpg|ogg|ogm|opus|otf|png|svg|svgz|swf|ttf|wav|webm|webp|woff|woff2|xml|zip)$`
@@ -128,33 +128,36 @@ func NewClient(serverSideKey string, options ...Option) (*Client, error) {
 // 3. Builds the request payload for the Protection API
 // 4. Performs the call to the Protection API and interpret the response
 func (c *Client) handler(w http.ResponseWriter, r *http.Request, next http.Handler) (bool, error) {
-	sendNext := func(res bool, err error, response http.ResponseWriter) (bool, error) {
-		if next != nil {
-			next.ServeHTTP(response, r)
-		} else {
-			return res, err
+	// sendNext forwards the request to the next handler (if any) unless it was blocked,
+	// in which case the Protection API response has already been written to w.
+	sendNext := func(isBlocked bool, err error) (bool, error) {
+		if next == nil {
+			return isBlocked, err
 		}
-		return res, nil
+		if !isBlocked {
+			next.ServeHTTP(w, r)
+		}
+		return isBlocked, nil
 	}
 
 	uri := getURI(r)
 	// Test exclusion regex
 	if c.urlPatternExclusion != nil && c.urlPatternExclusion.MatchString(uri) {
-		return false, nil
+		return sendNext(false, nil)
 	}
 
 	// Test inclusion regex
 	if c.urlPatternInclusion != nil && !c.urlPatternInclusion.MatchString(uri) {
-		return false, nil
+		return sendNext(false, nil)
 	}
 
 	queryStr, err := c.buildRequest(r)
 	if err != nil {
 		c.Logger.Error("error when building request payload: ", err)
-		return sendNext(false, err, w)
+		return sendNext(false, err)
 	}
 
-	resp, isBlocked, err := c.datadomeCall(queryStr, r, w)
+	_, isBlocked, err := c.datadomeCall(queryStr, r, w)
 	if err != nil {
 		switch {
 		case errors.Is(err, context.Canceled):
@@ -163,9 +166,9 @@ func (c *Client) handler(w http.ResponseWriter, r *http.Request, next http.Handl
 		default:
 			c.Logger.Error("error when performing call to Protection API: ", err)
 		}
-		return sendNext(isBlocked, err, resp)
+		return sendNext(isBlocked, err)
 	}
-	return sendNext(isBlocked, nil, resp)
+	return sendNext(isBlocked, nil)
 }
 
 // DatadomeHandler implements the [http.Handler] interface
@@ -356,7 +359,7 @@ func (c *Client) datadomeCall(jsonStr string, origReq *http.Request, origResp ht
 	origResp.WriteHeader(ddStatusCode)
 	_, err = origResp.Write(responseBody)
 	if err != nil {
-		return nil, false, err
+		return origResp, true, err
 	}
 	return origResp, true, nil
 }

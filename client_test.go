@@ -340,3 +340,72 @@ func TestAddDataDomeRequestHeaders(t *testing.T) {
 	assert.Equal(t, "1", request.Header.Get("X-Datadome-isbot"))
 	assert.Equal(t, "", request.Header.Get("X-DataDome-Obiwan"))
 }
+
+func TestDatadomeHandler(t *testing.T) {
+	registerProtectionAPI := func(ddStatus string) {
+		httpmock.RegisterResponder("POST", "/validate-request",
+			func(req *http.Request) (*http.Response, error) {
+				resp := httpmock.NewStringResponse(403, "blocked")
+				resp.Header.Add("X-Datadomeresponse", ddStatus)
+				return resp, nil
+			},
+		)
+	}
+
+	testCases := []struct {
+		name           string
+		ddStatus       string
+		path           string
+		expectNext     bool
+		expectedStatus int
+		expectedBody   string
+	}{
+		{name: "allowed request reaches next handler", ddStatus: "200", path: "/ping", expectNext: true, expectedStatus: http.StatusOK, expectedBody: "pong"},
+		{name: "blocked request does not reach next handler", ddStatus: "403", path: "/ping", expectNext: false, expectedStatus: http.StatusForbidden, expectedBody: "blocked"},
+		{name: "excluded path reaches next handler", ddStatus: "403", path: "/picture.jpg", expectNext: true, expectedStatus: http.StatusOK, expectedBody: "pong"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			httpmock.Activate()
+			defer httpmock.DeactivateAndReset()
+			registerProtectionAPI(tc.ddStatus)
+
+			client, err := NewClient("azerty")
+			assert.Nil(t, err)
+
+			nextCalled := false
+			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				nextCalled = true
+				_, _ = w.Write([]byte("pong"))
+			})
+
+			rw := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			client.DatadomeHandler(next).ServeHTTP(rw, r)
+
+			assert.Equal(t, tc.expectNext, nextCalled)
+			assert.Equal(t, tc.expectedStatus, rw.Code)
+			assert.Equal(t, tc.expectedBody, rw.Body.String())
+		})
+	}
+
+	t.Run("Protection API error fails open to next handler", func(t *testing.T) {
+		httpmock.Activate()
+		defer httpmock.DeactivateAndReset()
+		httpmock.RegisterResponder("POST", "/validate-request", httpmock.NewErrorResponder(fmt.Errorf("unreachable")))
+
+		client, err := NewClient("azerty")
+		assert.Nil(t, err)
+
+		nextCalled := false
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			nextCalled = true
+		})
+
+		rw := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/ping", nil)
+		assert.NotPanics(t, func() { client.DatadomeHandler(next).ServeHTTP(rw, r) })
+		assert.True(t, nextCalled)
+	})
+}
